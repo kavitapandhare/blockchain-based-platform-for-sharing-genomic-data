@@ -63,23 +63,31 @@ Ensure the following software is installed based on your operating system:
 
 ### For Windows
 
-1. **Clone the Repository**:
+1. **Check Virtualization**:
+   - Ensure virtualization is enabled on your PC. To verify:
+     1. Open **Task Manager**.
+     2. Go to the **Performance** tab.
+     3. Click on **CPU** and check if "Virtualization" is listed as "Enabled."
+
+   If it is not enabled, you may need to enable it in your system BIOS.
+
+2. **Clone the Repository**:
    ```powershell
    git clone https://github.com/yourusername/blockchain-genomic-data-platform.git
    cd blockchain-genomic-data-platform
    ```
 
-2. **Run the PowerShell Installation Script**:
+3. **Run the PowerShell Installation Script**:
    ```powershell
    powershell -ExecutionPolicy Bypass -File install.ps1
    ```
 
-3. **Start the Services**:
+4. **Start the Services**:
    ```powershell
    powershell -ExecutionPolicy Bypass -File start.ps1
    ```
 
-4. **Verify Installation**:
+5. **Verify Installation**:
    Ensure Docker, Node.js, and IPFS are installed and running:
    ```powershell
    docker --version
@@ -252,3 +260,4 @@ services:
 ## Support
 
 For any issues or questions, please open an issue on the GitHub repository or contact the project maintainers.
+
