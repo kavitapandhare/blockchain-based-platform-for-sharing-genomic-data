@@ -10,6 +10,8 @@ This repository provides a blockchain-based platform for securely sharing genomi
 2. **IPFS Storage**: Distributed file storage for genomic data.
 3. **Automated Installation**: Scripts to install prerequisites and configure the system for various platforms.
 4. **Cross-Platform Support**: Compatible with Linux, macOS, and Windows.
+5. **Multi-Organization Network**: Two organizations with two peers each.
+6. **Chaincode Deployment**: Supports genomic data transactions.
 
 ---
 
@@ -87,6 +89,65 @@ Ensure the following software is installed based on your operating system:
 
 ---
 
+## Network Topology
+
+The blockchain network consists of:
+- **2 Organizations**: Org1 and Org2.
+- **2 Peers per Organization**: Peer0 and Peer1 for both Org1 and Org2.
+- **Channel**: A single channel named `mychannel` is used for communication.
+- **Chaincode**: Deployed on the channel to enable genomic data transactions.
+
+This setup is designed to facilitate secure, distributed genomic data sharing.
+
+---
+
+## Setting Up the Blockchain Network
+
+### Step 1: Generate Cryptographic Material
+Generate cryptographic material for organizations using the `cryptogen` tool:
+```bash
+cryptogen generate --config=crypto-config.yaml --output=./crypto-config
+```
+
+### Step 2: Create Genesis Block
+Use the `configtxgen` tool to create the genesis block for the orderer:
+```bash
+configtxgen -profile TwoOrgsOrdererGenesis -channelID system-channel -outputBlock ./channel-artifacts/genesis.block
+```
+
+### Step 3: Start the Network
+Bring up the network using Docker Compose:
+```bash
+docker-compose -f docker-compose.yaml up -d
+```
+
+### Step 4: Create and Join the Channel
+1. Create the channel:
+   ```bash
+   peer channel create -o orderer.example.com:7050 -c mychannel -f ./channel-artifacts/channel.tx
+   ```
+2. Have each peer join the channel:
+   ```bash
+   peer channel join -b mychannel.block
+   ```
+
+### Step 5: Deploy Chaincode
+1. Package the chaincode:
+   ```bash
+   peer lifecycle chaincode package chaincode.tar.gz --path ./chaincode --lang node --label genomic-data-v1
+   ```
+2. Install the chaincode on all peers:
+   ```bash
+   peer lifecycle chaincode install chaincode.tar.gz
+   ```
+3. Approve and commit the chaincode:
+   ```bash
+   peer lifecycle chaincode approveformyorg --channelID mychannel --name genomic-data --version 1 --package-id <PACKAGE_ID> --sequence 1
+   peer lifecycle chaincode commit -o orderer.example.com:7050 --channelID mychannel --name genomic-data --sequence 1
+   ```
+
+---
+
 ## Scripts
 
 ### `setup.sh` (Linux/macOS)
@@ -110,6 +171,19 @@ Ensure the following software is installed based on your operating system:
 ### `start.ps1` (Windows)
 - Starts IPFS and the Hyperledger Fabric network.
 - Deploys chaincode and registers users.
+
+---
+
+## Testing the Chaincode
+
+Use the `peer chaincode invoke` and `peer chaincode query` commands to interact with the blockchain network:
+```bash
+# Invoke chaincode to store genomic data
+peer chaincode invoke -o orderer.example.com:7050 -C mychannel -n genomic-data -c '{"Args":["storeData","genomicID123","<data_hash>"]}'
+
+# Query chaincode to retrieve genomic data
+peer chaincode query -C mychannel -n genomic-data -c '{"Args":["getData","genomicID123"]}'
+```
 
 ---
 
@@ -178,5 +252,3 @@ services:
 ## Support
 
 For any issues or questions, please open an issue on the GitHub repository or contact the project maintainers.
-
----
