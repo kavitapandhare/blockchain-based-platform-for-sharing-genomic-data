@@ -15,24 +15,30 @@ This repository provides a blockchain-based platform for securely sharing genomi
 
 ---
 
+## Project Directory Structure
+
+```
+├── fabric-samples/
+│   ├── test-network/
+│   ├── chaincode/
+├── ipfs/
+│   ├── wallet/
+│   ├── enrollAdmin.js
+│   ├── enrollUser.js
+│   ├── main.js
+│   ├── package.json
+│   ├── README.md
+```
+
 ## Prerequisites
 
-Ensure the following software is installed based on your operating system:
+Before running the scripts, ensure you have installed the following:
 
-- **Linux/macOS**:
-  - Bash shell
-  - Docker and Docker Compose
-  - Node.js
-  - IPFS
-- **Windows**:
-  - PowerShell
-  - WSL 2
-  - Chocolatey (will be installed automatically if not present)
-  - Docker Desktop
-  - Node.js
-  - IPFS
-
----
+- **Hyperledger Fabric** (Fabric binaries and Docker images)
+- **IPFS** (Installed and running)
+- **Node.js** (Version 14 or later)
+- **Docker & Docker Compose**
+- **Git & cURL**
 
 ## Installation Guide
 Follow the installation guide available at [this link](https://github.com/kavitapandhare/Implementation-of-hyperledgerFabric-with-IPFS/blob/main/README.md) for detailed instructions.
@@ -49,139 +55,109 @@ This setup is designed to facilitate secure, distributed genomic data sharing.
 
 ---
 
-## Setting Up the Blockchain Network
+## Steps to Upload File to IPFS and Store Hash on Hyperledger Fabric
 
-### Step 1: Generate Cryptographic Material
-Generate cryptographic material for organizations using the `cryptogen` tool:
-```bash
-cryptogen generate --config=crypto-config.yaml --output=./crypto-config
+### 1. Enroll Admin
+
+**Script Name:** `enrollAdmin.js`
+
+This script registers and enrolls the admin identity required to interact with the blockchain.
+
+**How to Run:**
+
+- Make sure your Fabric network is running.
+- Run the script with:
+  ```sh
+  node enrollAdmin.js
+  ```
+- This will create an admin identity and store it inside the `wallet/` directory.
+- **Ensure that the correct path is set in the script:**
+  ```javascript
+  const ccpPath = path.resolve(__dirname, '../fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/connection-org1.json');
+  ```
+
+### 2. Enroll User
+
+**Script Name:** `enrollUser.js`
+
+This script registers and enrolls a user identity to interact with the blockchain.
+
+**How to Run:**
+
+- Ensure the admin identity is enrolled.
+- Run the script with:
+  ```sh
+  node enrollUser.js
+  ```
+- This will create a user identity and store it inside the `wallet/` directory.
+- **Ensure that the correct path is set in the script:**
+  ```javascript
+  const ccpPath = path.resolve(__dirname, '../fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/connection-org1.json');
+  ```
+
+### 3. Upload File to IPFS and Store Hash in Hyperledger Fabric
+
+**Script Name:** `main.js`
+
+This script combines both file upload to IPFS and storing the hash on Hyperledger Fabric in one workflow. It is a combination of `uploadToIPFS.js` and `storeHashInFabric.js`.
+
+**How to Run:**
+
+- Ensure both IPFS and Hyperledger Fabric are running.
+- Run the script with:
+  ```sh
+  node main.js
+  ```
+- This will upload the file to IPFS and store the resulting hash in Hyperledger Fabric.
+
+## Troubleshooting
+
+### 1. Parameter Type Issues in Chaincode
+
+If you encounter the following error:
+
+```sh
+error managing parameter param2. conversion error. cannot convert passed value [value] to [expected type]
 ```
 
-### Step 2: Create Genesis Block
-Use the `configtxgen` tool to create the genesis block for the orderer:
-```bash
-configtxgen -profile TwoOrgsOrdererGenesis -channelID system-channel -outputBlock ./channel-artifacts/genesis.block
+**Solution:**
+This error typically occurs when the parameter types do not match what the chaincode expects.
+
+#### Check the Chaincode `CreateAsset` Function:
+
+The `CreateAsset` function in the chaincode expects the parameters to be:
+
+- `id` (string)
+- `color` (string)
+- `size` (integer)
+- `owner` (string)
+- `appraisedValue` (integer)
+
+Ensure that you are passing the correct types for each parameter:
+
+- **String values** should be passed as strings (e.g., "genomicData").
+- **Integer values** should be passed as numbers (e.g., 100).
+
+Example: If you're passing the parameters like this:
+
+```javascript
+await contract.submitTransaction('CreateAsset', 'hash-12345', 'genomicData', 100, 'user1', 200);
 ```
 
-### Step 3: Start the Network
-Bring up the network using Docker Compose:
-```bash
-docker-compose -f docker-compose.yaml up -d
-```
+This should work as expected.
 
-### Step 4: Create and Join the Channel
-1. Create the channel:
-   ```bash
-   peer channel create -o orderer.example.com:7050 -c mychannel -f ./channel-artifacts/channel.tx
-   ```
-2. Have each peer join the channel:
-   ```bash
-   peer channel join -b mychannel.block
-   ```
+### 2. Debugging Chaincode
 
-### Step 5: Deploy Chaincode
-1. Package the chaincode:
-   ```bash
-   peer lifecycle chaincode package chaincode.tar.gz --path ./chaincode --lang node --label genomic-data-v1
-   ```
-2. Install the chaincode on all peers:
-   ```bash
-   peer lifecycle chaincode install chaincode.tar.gz
-   ```
-3. Approve and commit the chaincode:
-   ```bash
-   peer lifecycle chaincode approveformyorg --channelID mychannel --name genomic-data --version 1 --package-id <PACKAGE_ID> --sequence 1
-   peer lifecycle chaincode commit -o orderer.example.com:7050 --channelID mychannel --name genomic-data --sequence 1
-   ```
+If you continue to face issues, check the following:
 
----
+- Ensure the chaincode is properly deployed and instantiated on the correct channel.
+- Verify that the Fabric network is correctly configured, and the identity being used for the transaction has the necessary permissions.
+- Check for any discrepancies in the chaincode logic related to type conversion.
 
-## Scripts
+### 3. Additional Notes
 
-### `setup.sh` (Linux/macOS)
-- Detects the operating system and runs the appropriate installation script.
-
-### `install.sh` (Linux/macOS)
-- Installs all prerequisites:
-  - Docker
-  - Node.js
-  - IPFS
-  - Hyperledger Fabric tools
-
-### `install.ps1` (Windows)
-- Installs all prerequisites using Chocolatey and manual downloads where necessary.
-- Configures Docker, Node.js, IPFS, and Hyperledger Fabric.
-
-### `start.sh` (Linux/macOS)
-- Starts IPFS and the Hyperledger Fabric network.
-- Deploys chaincode and registers users.
-
-### `start.ps1` (Windows)
-- Starts IPFS and the Hyperledger Fabric network.
-- Deploys chaincode and registers users.
-
----
-
-## Testing the Chaincode
-
-Use the `peer chaincode invoke` and `peer chaincode query` commands to interact with the blockchain network:
-```bash
-# Invoke chaincode to store genomic data
-peer chaincode invoke -o orderer.example.com:7050 -C mychannel -n genomic-data -c '{"Args":["storeData","genomicID123","<data_hash>"]}'
-
-# Query chaincode to retrieve genomic data
-peer chaincode query -C mychannel -n genomic-data -c '{"Args":["getData","genomicID123"]}'
-```
-
----
-
-## Configuration
-
-### Docker Configuration
-
-Ensure your `docker-compose.yml` file uses appropriate paths:
-
-#### Example (Linux/macOS):
-```yaml
-version: '3.7'
-
-services:
-  fabric:
-    image: hyperledger/fabric-peer:2.2
-    ports:
-      - "7051:7051"
-    volumes:
-      - "./fabric-data:/var/hyperledger"
-  ipfs:
-    image: ipfs/go-ipfs:latest
-    ports:
-      - "8080:8080"
-      - "5001:5001"
-    volumes:
-      - "./ipfs-data:/data/ipfs"
-```
-
-#### Example (Windows):
-```yaml
-version: '3.7'
-
-services:
-  fabric:
-    image: hyperledger/fabric-peer:2.2
-    ports:
-      - "7051:7051"
-    volumes:
-      - "C:/fabric-data:/var/hyperledger"
-  ipfs:
-    image: ipfs/go-ipfs:latest
-    ports:
-      - "8080:8080"
-      - "5001:5001"
-    volumes:
-      - "C:/ipfs-data:/data/ipfs"
-```
-
----
+- Make sure the correct file path and username are provided in the scripts.
+- Ensure that the Hyperledger Fabric network and IPFS are both running before executing the scripts.
 
 ## Usage
 
@@ -201,3 +177,10 @@ services:
 
 For any issues or questions, please open an issue on the GitHub repository or contact the project maintainers.
 
+---
+
+## Conclusion
+
+Following these steps, you can successfully integrate Hyperledger Fabric with IPFS, enroll users, upload files, and troubleshoot common chaincode issues. For further assistance, raise an issue in the repository.
+
+---
